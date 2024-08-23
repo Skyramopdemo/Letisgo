@@ -57,13 +57,17 @@
     <label for="final">Destino Final</label>
     <input type="text" name="final" id="final" placeholder="Rua XXX, RS - Brasil">
 
-    <label for="final">Modo de Viagem</label>
+    <label for="viagem">Modo de Viagem</label>
     <select name="viagem" id="viagem">
       <option value="DRIVING">Dirigindo</option>
     </select>
 
     <label for="interesse">Pontos de Interesse</label>
     <input type="text" name="interesse" id="interesse" placeholder="Rua XXX, RS - Brasil">
+
+    <label for="dis">Distância Máxima entre Pontos</label>
+    <input type="number" name="distance" id="distance" value=50000>
+
 
     <button type="button" onclick="createRoute()">Criar Rota</button>
   </div>
@@ -84,11 +88,15 @@
     </script>
     
   <script>
-    
+    let baseDistance
     let map;
     var lat;
     var lng;
     var coords = [];
+    var arrayNames = [];
+    var last;
+    var markersArray = [];
+    var placeArray = []
     
     function initMap(){
       var directionsService = new window.google.maps.DirectionsService(); var directionsRenderer = new window.google.maps.DirectionsRenderer(); map = new google.maps.Map(document.getElementById("map"), {
@@ -101,82 +109,230 @@
     }
 
 
+    function defaultDistance(origin, destination, travelMode){
+      var distance = new google.maps.DistanceMatrixService();
+      distance.getDistanceMatrix(
+        {
+          origins: [origin],
+          destinations: [destination],
+          travelMode: travelMode,
+        }, (response, status)=> {baseDistance = response.rows[0].elements[0].distance.value})
+
+    }
     
-    
-    function createRoute(){
-      var directionsService = new window.google.maps.DirectionsService();var directionsRenderer = new window.google.maps.DirectionsRenderer();
+    function renderRoute(start, end, waypoints){
+      var directionsService = new window.google.maps.DirectionsService();
+      var directionsRenderer = new window.google.maps.DirectionsRenderer();
+      directionsRenderer.setDirections({routes: []});
+      directionsRenderer.setMap(map)
+      var waypts = [];
+      for (let i = 0; i < waypoints.length; i++) {
+        waypts.push({
+          location: waypoints[i],
+          stopover: true,
+        });
+      }
       var request = {
-        origin: document.getElementById('partida').value,
-        destination: document.getElementById('final').value,
+        origin: start,
+        destination: end,
+        waypoints: waypts,
+        optimizeWaypoints: true,
         travelMode: document.getElementById('viagem').value
-      };
+      }
       directionsService.route(request, function (result, status) {
         if (status == "OK") {
           directionsRenderer.setDirections(result);
         }
       },
       directionsRenderer.setMap(map))
-      
-      nearbySearch()
     }
-
-    async function nearbySearch() {
-      var geocoder = new google.maps.Geocoder();
+    
+    function createRoute(){
       var origin = document.getElementById('partida').value;
       var destination = document.getElementById('final').value;
+      var travelMode = document.getElementById('viagem').value;
+      var maxRange = parseInt(document.getElementById('distance').value);
+      //directionsService.route(request, function (result, status) {
+      //  if (status == "OK") {
+      //    directionsRenderer.setDirections(result);
+      //  }
+      //},
+      //directionsRenderer.setMap(map))
 
-      const { Place, SearchNearbyRankPreference } = await google.maps.importLibrary("places");
-      const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+      defaultDistance(origin, destination, travelMode)
+
       
-      geocoder.geocode( { 'address': origin}, async function(results, status) {
+      nearbySearch(origin, destination, maxRange);
+    }
+
+    async function nearbySearch(origin, destination, maxRange) {
+      var { Place, SearchNearbyRankPreference } = await google.maps.importLibrary("places");
+      var { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+      var geocoder = new google.maps.Geocoder();
+      var distance = new google.maps.DistanceMatrixService();
+      placeArray = []
+      
+      //var origin = document.getElementById('partida').value;
+      //var destination = document.getElementById('final').value;
+      var preference = ["restaurant"]
+      
+      
+      await geocoder.geocode( { 'address': origin}, async function(results, status) {
         if (status == google.maps.GeocoderStatus.OK)
         {
           coords = results[0].geometry.location
         }
         else{
-          alert("erro")
+          errorAlert("erro");
         }
       });
-  
       var lat = coords.lat()
       var lng = coords.lng()
-      let center = await new google.maps.LatLng(lat, lng);
+      var center = await new google.maps.LatLng(lat, lng);
+      
 
-      console.log(center)
-      const request = {
-        fields: ["displayName", "location", "businessStatus"],
+      var request = {
+        fields: ["displayName", "location", "businessStatus", "types"],
         locationRestriction: {
           center: center,
-          radius: 5000,
+          radius: maxRange,
         },
-        includedPrimaryTypes: ["restaurant"],
+        includedPrimaryTypes: preference,
         maxResultCount: 20,
         rankPreference: SearchNearbyRankPreference.POPULARITY,
         language: "pt-BR",
         region: "br",
       };
-      const { places } = await Place.searchNearby(request);
+      var { places } = await Place.searchNearby(request);
     
-      if (places.length) {
-        console.log(places);
-    
-        const { LatLngBounds } = await google.maps.importLibrary("core");
-        const bounds = new LatLngBounds();
+      //var nearest = searchNearest(places);
+
+      
+      //if (places.length) {
+      //  const { LatLngBounds } = await google.maps.importLibrary("core");
+      //  const bounds = new LatLngBounds();
+      //  
+      //  places.forEach((place) => {
+      //    const markerView = new AdvancedMarkerElement({
+      //      map,
+      //      position: place.location,
+      //      title: place.displayName,
+      //    });
+      //
+      //    bounds.extend(place.location);
+      //    console.log(place);
+      //  });
+      //  map.fitBounds(bounds);
+      //} else {
+      //  errorAlert("No results");
+      //}
+
+
+      places.forEach((place) => {
+        placeArray.push(place.displayName)
+      });
+
+      //console.log(placeArray);
+      //console.log(placeArray)
+      distance.getDistanceMatrix(
+        {
+          origins: placeArray,
+          destinations: [destination],
+          travelMode: 'DRIVING',
+          //transitOptions: TransitOptions,
+          //drivingOptions: DrivingOptions,
+          //unitSystem: google.maps.UnitSystem.METRIC,
+          //avoidHighways: Boolean,
+          //avoidTolls: Boolean,
+        }, searchNearest)
         
-        places.forEach((place) => {
-          const markerView = new AdvancedMarkerElement({
-            map,
-            position: place.location,
-            title: place.displayName,
-          });
-    
-          bounds.extend(place.location);
-          console.log(place);
-        });
-        map.fitBounds(bounds);
-      } else {
-        console.log("No results");
       }
+      
+      async function searchNearest(response, status){
+      var origin = document.getElementById('partida').value;
+      var destination = document.getElementById('final').value;
+      var maxRange = parseInt(document.getElementById('distance').value);
+      var travelMode = document.getElementById('viagem').value;
+
+      arrayPoints = {}
+      console.log("///")
+      console.log(response)
+      console.log(status)
+      
+      
+      var checkSum = 0;
+      let promessa = new Promise(function(){
+      if(status != undefined){
+        
+        for(i = 0; i<20; i++){
+          //console.log(response.rows[i].elements[0].distance.value)
+          console.log("distance" +baseDistance)
+  
+          if(response.rows[i].elements[0].status == "OK"){
+            if(response.rows[i].elements[0].distance.value < baseDistance){
+              //arrayPoints.push(response.originAddresses[i])
+              
+              arrayPoints[placeArray[i]] = response.originAddresses[i];
+              
+              //console.log("V" + i + ":" + response.rows[i].elements[0].distance.value)
+              //console.log(response.rows[i].elements[0].distance.value)
+            }else{
+              //console.log("F" + i + ":" + response.rows[i].elements[0].distance.value)
+
+              checkSum += 1
+            }
+          }else{
+
+            checkSum += 1
+          }
+        }
+
+      }
+      });
+      console.log("check:" + checkSum);
+      if(checkSum == 20){
+        console.log("names" + arrayNames)
+        renderRoute(origin, destination, arrayNames);
+      }
+      else{
+        console.log(arrayPoints);
+        var j = Object.keys(arrayPoints).length;
+        var k = random(0, j)
+        var l = Object.keys(arrayPoints)[k]
+        console.log("Valor:" + l)
+        arrayNames.push(l)
+        defaultDistance(l, destination, travelMode)
+        nearbySearch(l, destination, maxRange)
+        console.log("///")
+      }
+
+      
+
+      //console.log(response);
+      await promessa;
+      
+      //console.log(status);
+
+
+
+    }
+    
+    //Melhorar dps, so quero ter algo por enquanto
+    function errorAlert(text){
+      console.log(text)
+      alert(text);
+    }
+ 
+    function random(min, max){
+      return Math.floor(Math.random() * (max - min) ) + min;
+    }
+
+    function deleteMarkers(markersArray) {
+      for (let i = 0; i < markersArray.length; i++) {
+        markersArray[i].setMap(null);
+      }
+    
+      markersArray = [];
     }
     
   </script>

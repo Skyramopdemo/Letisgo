@@ -7,14 +7,17 @@
   <title>Letisgo</title>
   <meta author="Bernardo Fernando Reolon/@bernarlink - Henrique Gabriel Albring/@Skyramopdemo">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Permanent+Marker&display=swap" rel="stylesheet">
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
     crossorigin="anonymous"></script>
-
-  <script defer src="https://maps.googleapis.com/maps/api/js?key=<%=map_api%>&loading=async&callback=initMap&libraries=marker">
-  </script>
+  <script defer src="https://maps.googleapis.com/maps/api/js?&key=<%=map_api%>&loading=async&callback=initMap&libraries=marker"></script>
+  <!-- <script defer src="https://maps.googleapis.com/maps/api/js?v=beta&key=<%=map_api%>&loading=async&callback=initMap&libraries=marker"></script> -->
 
 </head>
 
@@ -30,6 +33,12 @@
       margin: 0;
       padding: 0;
     }
+
+    .title-font {
+      font-family: "Lilita One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+    }
   </style>
 
 
@@ -44,34 +53,78 @@
         <li class="nav-item"><a href="#" class="nav-link link-body-emphasis px-2">Sobre</a></li>
     </header>
   </div>
+  <br>
 
 
   <div class="container d-flex flex-column">
 
-    <h1>Letisbora para o trejeto?</h1>
+    <h1 class="title-font py-3">Letisbora para o trejeto?</h1>
 
 
-    <label for="partida">Local de Partida</label>
+    <label for="partida" class="title-font py-1">Local de Partida</label>
     <input type="text" name="partida" id="partida" placeholder="Rua XXX, RS - Brasil">
 
-    <label for="final">Destino Final</label>
+    <label for="final" class="title-font py-1">Destino Final</label>
     <input type="text" name="final" id="final" placeholder="Rua XXX, RS - Brasil">
 
-    <label for="viagem">Modo de Viagem</label>
+    <label for="viagem" class="title-font py-1">Modo de Viagem</label>
     <select name="viagem" id="viagem">
       <option value="DRIVING">Dirigindo</option>
     </select>
 
-    <label for="interesse">Pontos de Interesse</label>
-    <input type="text" name="interesse" id="interesse" placeholder="Rua XXX, RS - Brasil">
+    <label for="interesse" class="title-font py-1">Pontos de Interesse/Quantidade</label>
+    <div id="points" class="d-flex flex-column">
+      <div class="d-flex flex-row">
+        <select name="viagem" class="point  w-50">
+          <option value="" default></option>
+          <option value="gas_station">Posto de Combustível</option>
+          <!-- <option value="gym">Academia</option> -->
+          <option value="stadium">Estádio</option>
+          <option value="supermarket">Super Mercado</option>
+          <!-- <option value="market">Mercado</option> -->
+          <!-- <option value="liquor-store">Botillera</option> -->
+          <option value="farm">Fazenda</option>
+          <option value="art_gallery">Galeria de Arte</option>
+          <!-- <option value="library">Biblioteca</option> -->
+          <option value="zoo">Zoológico</option>
+          <option value="national_park">Parque Nacional</option>
+          <option value="movie_theater">Cinema</option>
+          <option value="historical_landmark">Monumento Histórico</option>
+          <option value="hiking_area">Trilha</option>
+          <option value="bank">Banco</option>
+          <!-- <option value="atm">ATM</option> -->
+          <option value="restaurant">Restaurante</option>
+          <option value="cafe">Café</option>
+          <option value="bakery">Padaria</option>
+          <option value="bar">Bar</option>
+          <!--<option value="fire_station"></option>-->
+          <!--<option value="police"></option>-->
+          <!--<option value="post_office"></option>-->
+          <!--<option value="dentist"></option>-->
+          <!-- <option value="drugstore">Farmácia</option> -->
+          <option value="hospital">Hospital</option>
+          <option value="campground">Parque de Campismo</option>
+          <option value="hotel">Hotel</option>
+          <option value="church">Igreja</option>
+          <option value="hindu_temple">Templo Hindu</option>
+          <option value="mosque">Mesquita</option>
+          <option value="synagogue">Sinagoga</option>
+      </select>
+      <input type="number" class="pointQnt w-50" name="interesse" placeholder="Quantidade de Pontos">
+    </div>
+  </div>
+    
+    <button type="button" class="" onclick="addInput()">+</button>
 
-    <label for="dis">Distância Máxima entre Pontos</label>
+    <label for="dis" class="title-font py-1 ">Distância Máxima entre Pontos</label>
     <input type="number" name="distance" id="distance" value=50000>
 
+    <button type="button" class="my-4 py-3" onclick="createRoute()">Criar Rota</button>
 
-    <button type="button" onclick="createRoute()">Criar Rota</button>
+
   </div>
 
+  
 
   <div id="map"></div>
   <!--<script async
@@ -96,8 +149,37 @@
     var arrayNames = [];
     var last;
     var markersArray = [];
-    var placeArray = []
+    var placeNameArray = []
+    var disObject = null;
+
+
+    var stack;
+
+    var waypntsComplete = {}
+
+
+    function addInput(){
+      var div = document.getElementById("points");
+
+      var type = document.querySelectorAll(".point")
+      var typeQnt = document.querySelectorAll(".pointQnt")
+
+      div.innerHTML += '<div class="d-flex flex-row"><select name="viagem" class="point w-50"><option value="" default><option value="gas_station">Posto de Combustível</option><option value="stadium">Estádio</option><option value="supermarket">Super Mercado</option><option value="farm">Fazenda</option><option value="art_gallery">Galeria de Arte</option><option value="zoo">Zoológico</option><option value="national_park">Parque Nacional</option><option value="movie_theater">Cinema</option><option value="historical_landmark">Monumento Histórico</option><option value="hiking_area">Trilha</option><option value="bank">Banco</option><option value="shopping_mall">Shopping</option><option value="restaurant">Restaurante</option><option value="cafe">Café</option><option value="bakery">Padaria</option><option value="bar">Bar</option><option value="hospital">Hospital</option><option value="campground">Parque de Campismo</option><option value="hotel">Hotel</option><option value="church">Igreja</option><option value="hindu_temple">Templo Hindu</option><option value="mosque">Mesquita</option><option value="synagogue">Sinagoga</option></select><input type="number" class="pointQnt w-50" name="interesse" placeholder="Quantidade de Pontos"></div>'
     
+
+      var typeNEW = document.querySelectorAll(".point")
+      var typeQntNEW = document.querySelectorAll(".pointQnt")
+
+
+      for (let i = 0; i < typeQnt.length; i++){
+        typeQntNEW[i].value = typeQnt[i].value
+      }
+      for (let i = 0; i < type.length; i++){
+        typeNEW[i].value = type[i].value
+      }
+      
+    }
+
     function initMap(){
       var directionsService = new window.google.maps.DirectionsService(); var directionsRenderer = new window.google.maps.DirectionsRenderer(); map = new google.maps.Map(document.getElementById("map"), {
       zoom: 8,
@@ -117,21 +199,81 @@
           destinations: [destination],
           travelMode: travelMode,
         }, (response, status)=> {baseDistance = response.rows[0].elements[0].distance.value})
-
     }
     
     function renderRoute(start, end, waypoints){
       var directionsService = new window.google.maps.DirectionsService();
       var directionsRenderer = new window.google.maps.DirectionsRenderer();
-      directionsRenderer.setDirections({routes: []});
-      directionsRenderer.setMap(map)
+      directionsRenderer.setDirections({routes: []}); directionsRenderer.setMap(map);
       var waypts = [];
-      for (let i = 0; i < waypoints.length; i++) {
-        waypts.push({
-          location: waypoints[i],
-          stopover: true,
-        });
+
+      var type = document.querySelectorAll(".point")
+      var typeQnt = document.querySelectorAll(".pointQnt")
+
+      stack++
+
+      if(stack < 4){
+        createRoute()
       }
+
+
+      console.log(waypntsComplete)
+
+      var total = 0
+
+      for (let i = 0; i < typeQnt.length; i++){
+        total += typeQnt[i].value
+
+        console.log(total)
+      }
+
+
+      //Passa por todos os tipos selecionados
+      for (let i = 0; i < type.length; i++){
+        //Variavel savedPoints, salva os pontos aos quais serão escolhidos aleatoriamente
+        var savedPoints = []
+        //Passa por todos os waypoints salvos nas pesquisas (tem q fazer salvarem os waypntsComplete)
+        for (key in waypntsComplete){
+          //Verifica se o tipo I é o mesmo tipo que está presente no item J, e salva o endereço do item J nos pontos salvos
+          if(waypntsComplete[key][1].includes(type[i].value)){
+            //console.log(type)
+            //console.log("//")
+            //console.log(waypntsComplete[key])
+            savedPoints.push(waypntsComplete[key])
+          }
+        }
+      }
+      
+      //console.log(savedPoints)
+
+      //Passa por todas as quantidade dos tipos selecionados
+      for (let i = 0; i < typeQnt.length; i++){
+        t = typeQnt[i]
+        
+        //console.log(typeQnt)
+        //console.log(t)
+        
+        //Faz um loop igual a quantidade dos tipos selecionados
+        for (let j = 0; j < t.value; j++){
+          //Pega um ponto qualquer dos itens salvos
+          var pnt = savedPoints[random(0, savedPoints.length)][2];
+          //Define o pnt como ponto
+          waypts.push({
+            location: pnt,
+            stopover: true
+          })
+
+          //break
+        }
+      }
+
+      //for (let i = 0; i < waypoints.length; i++) {
+        //waypts.push({
+          //location: waypoints[i],
+          //stopover: true,
+        //});
+      //}
+
       var request = {
         origin: start,
         destination: end,
@@ -145,6 +287,7 @@
         }
       },
       directionsRenderer.setMap(map))
+      disObject = directionsRenderer
     }
     
     function createRoute(){
@@ -152,31 +295,22 @@
       var destination = document.getElementById('final').value;
       var travelMode = document.getElementById('viagem').value;
       var maxRange = parseInt(document.getElementById('distance').value);
-      //directionsService.route(request, function (result, status) {
-      //  if (status == "OK") {
-      //    directionsRenderer.setDirections(result);
-      //  }
-      //},
-      //directionsRenderer.setMap(map))
 
-      defaultDistance(origin, destination, travelMode)
+      if(disObject){
+        disObject.setMap(null)
+      }
 
-      
+      defaultDistance(origin, destination, travelMode);
       nearbySearch(origin, destination, maxRange);
     }
 
     async function nearbySearch(origin, destination, maxRange) {
-      var { Place, SearchNearbyRankPreference } = await google.maps.importLibrary("places");
       var { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+      var { Place, SearchNearbyRankPreference } = await google.maps.importLibrary("places");
       var geocoder = new google.maps.Geocoder();
       var distance = new google.maps.DistanceMatrixService();
-      placeArray = []
-      
-      //var origin = document.getElementById('partida').value;
-      //var destination = document.getElementById('final').value;
-      var preference = ["restaurant"]
-      
-      
+      placeNameArray = []
+
       await geocoder.geocode( { 'address': origin}, async function(results, status) {
         if (status == google.maps.GeocoderStatus.OK)
         {
@@ -197,126 +331,108 @@
           center: center,
           radius: maxRange,
         },
-        includedPrimaryTypes: preference,
         maxResultCount: 20,
         rankPreference: SearchNearbyRankPreference.POPULARITY,
         language: "pt-BR",
         region: "br",
       };
       var { places } = await Place.searchNearby(request);
-    
-      //var nearest = searchNearest(places);
-
       
-      //if (places.length) {
-      //  const { LatLngBounds } = await google.maps.importLibrary("core");
-      //  const bounds = new LatLngBounds();
-      //  
-      //  places.forEach((place) => {
-      //    const markerView = new AdvancedMarkerElement({
-      //      map,
-      //      position: place.location,
-      //      title: place.displayName,
-      //    });
-      //
-      //    bounds.extend(place.location);
-      //    console.log(place);
-      //  });
-      //  map.fitBounds(bounds);
-      //} else {
-      //  errorAlert("No results");
-      //}
+      
+      //Apenas mostra no mapa os pontos que foram gerados
+      await createSecundaryPoints(places)
+
 
 
       places.forEach((place) => {
-        placeArray.push(place.displayName)
+        placeNameArray.push(place.displayName)
       });
-
-      //console.log(placeArray);
-      //console.log(placeArray)
-      distance.getDistanceMatrix(
-        {
-          origins: placeArray,
-          destinations: [destination],
-          travelMode: 'DRIVING',
-          //transitOptions: TransitOptions,
-          //drivingOptions: DrivingOptions,
-          //unitSystem: google.maps.UnitSystem.METRIC,
-          //avoidHighways: Boolean,
-          //avoidTolls: Boolean,
-        }, searchNearest)
-        
-      }
       
-      async function searchNearest(response, status){
+      distance.getDistanceMatrix({
+        origins: placeNameArray,
+        destinations: [destination],
+        travelMode: 'DRIVING',
+      }, searchNearest)
+      
+    }
+      
+    async function searchNearest(response, status){
       var origin = document.getElementById('partida').value;
       var destination = document.getElementById('final').value;
       var maxRange = parseInt(document.getElementById('distance').value);
       var travelMode = document.getElementById('viagem').value;
 
+
+
       arrayPoints = {}
-      console.log("///")
-      console.log(response)
-      console.log(status)
-      
-      
+
+
+
       var checkSum = 0;
       let promessa = new Promise(function(){
-      if(status != undefined){
-        
-        for(i = 0; i<20; i++){
-          //console.log(response.rows[i].elements[0].distance.value)
-          console.log("distance" +baseDistance)
-  
-          if(response.rows[i].elements[0].status == "OK"){
-            if(response.rows[i].elements[0].distance.value < baseDistance){
-              //arrayPoints.push(response.originAddresses[i])
-              
-              arrayPoints[placeArray[i]] = response.originAddresses[i];
-              
-              //console.log("V" + i + ":" + response.rows[i].elements[0].distance.value)
-              //console.log(response.rows[i].elements[0].distance.value)
+       if(status != undefined){
+          for(i = 0; i<20; i++){
+            if(response.rows[i].elements[0].status == "OK"){
+              if(response.rows[i].elements[0].distance.value < baseDistance){
+                arrayPoints[placeNameArray[i]] = response.originAddresses[i];
+              }else{
+                checkSum += 1
+              }
             }else{
-              //console.log("F" + i + ":" + response.rows[i].elements[0].distance.value)
-
               checkSum += 1
             }
-          }else{
-
-            checkSum += 1
           }
         }
-
-      }
       });
-      console.log("check:" + checkSum);
       if(checkSum == 20){
-        console.log("names" + arrayNames)
         renderRoute(origin, destination, arrayNames);
       }
       else{
-        console.log(arrayPoints);
-        var j = Object.keys(arrayPoints).length;
-        var k = random(0, j)
-        var l = Object.keys(arrayPoints)[k]
-        console.log("Valor:" + l)
-        arrayNames.push(l)
-        defaultDistance(l, destination, travelMode)
-        nearbySearch(l, destination, maxRange)
-        console.log("///")
+        var arraySize = Object.keys(arrayPoints).length;
+        var randomKey = random(0, arraySize)
+        var randomPoint = Object.keys(arrayPoints)[randomKey]
+        arrayNames.push(randomPoint)
+        defaultDistance(randomPoint, destination, travelMode)
+        nearbySearch(randomPoint, destination, maxRange)
       }
 
-      
-
-      //console.log(response);
       await promessa;
-      
-      //console.log(status);
-
-
-
     }
     
+    async function createSecundaryPoints(places){
+      if (places.length) {
+        var { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        const { LatLngBounds } = await google.maps.importLibrary("core");
+        const {PinElement} = await google.maps.importLibrary("marker")
+        const bounds = new LatLngBounds();
+        
+        places.forEach((place) => {
+          waypntsComplete[place.id] = [place.displayName, place.types, place.location]
+          const pin = new PinElement({
+            background: "#A0AAAB",
+            borderColor: "#3C4344",
+            glyphColor: "#E4E7E7"
+          })
+          ///////////////////////////////ESTA EM BETA AINDA, ADICIONAR DPS
+          //pin.addEventListener("click", function(e, place){
+          //  console.log("BB" + place.displayName)
+          //})
+          const markerView = new AdvancedMarkerElement({
+            map,
+            position: place.location,
+            title: place.displayName,
+            content: pin.element,
+          });
+      
+          bounds.extend(place.location);
+        });
+        map.fitBounds(bounds);
+      } else {
+        errorAlert("No results");
+      }
+
+    }
+
     //Melhorar dps, so quero ter algo por enquanto
     function errorAlert(text){
       console.log(text)
@@ -326,14 +442,8 @@
     function random(min, max){
       return Math.floor(Math.random() * (max - min) ) + min;
     }
-
-    function deleteMarkers(markersArray) {
-      for (let i = 0; i < markersArray.length; i++) {
-        markersArray[i].setMap(null);
-      }
     
-      markersArray = [];
-    }
+    
     
   </script>
 
